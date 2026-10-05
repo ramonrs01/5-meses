@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Super Ana Quest</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', monospace;
+            touch-action: none;
+            background: #0f172a;
+            color: #fff;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .pixel-border {
+            box-shadow: 4px 4px 0px #000;
+        }
+        .btn-active:active {
+            transform: scale(0.92);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between items-center bg-sky-900 select-none">
+
+    <header class="w-full max-w-4xl flex justify-between items-center p-3 sm:p-4 bg-sky-950/90 backdrop-blur border-b-4 border-black z-10 shadow-lg">
+        <div class="flex flex-col space-y-1">
+            <span class="text-[8px] sm:text-[10px] text-yellow-400">FRASE SECRETA:</span>
+            <div id="phrase-tracker" class="flex flex-wrap gap-1 tracking-wider text-emerald-400 bg-black/50 p-2 rounded text-[10px] sm:text-xs">
+                _ _ _ _   _ _ _   _ _ _
+            </div>
+        </div>
+        <div class="text-[10px] sm:text-xs text-pink-400 font-bold bg-pink-950/50 px-3 py-2 rounded-lg border border-pink-800">
+            <i class="fa-solid fa-heart animate-pulse"></i> <span id="letters-count">0</span>/12
+        </div>
+    </header>
+
+    <main class="relative flex-1 w-full max-w-4xl flex items-center justify-center overflow-hidden bg-gradient-to-b from-sky-400 to-sky-600 border-x-4 border-black my-auto">
+        <canvas id="gameCanvas" class="w-full h-full block bg-sky-300"></canvas>
+
+        <!-- Tela de Vitória Romântica -->
+        <div id="victory-modal" class="absolute inset-0 bg-black/85 flex flex-col items-center justify-center hidden z-30 p-6 text-center">
+            <div class="bg-gradient-to-b from-pink-100 to-amber-50 text-slate-900 p-6 sm:p-8 rounded-2xl border-4 border-black pixel-border max-w-md w-full animate-bounce shadow-2xl">
+                <h1 class="text-sm sm:text-lg text-pink-600 mb-3 font-bold">💖 VOCÊ COMPLETOU! 💖</h1>
+                <p class="text-[9px] sm:text-[11px] mb-4 leading-relaxed text-slate-800">Você encontrou todas as caixas misteriosas e formou a linda mensagem:</p>
+                <div class="text-sm sm:text-lg text-pink-600 font-black mb-6 bg-pink-200/80 py-3 px-2 rounded-xl border-2 border-pink-400 shadow-inner">
+                    "I LOVE YOU ANA"
+                </div>
+                <p class="text-[8px] sm:text-[10px] text-slate-600 mb-6">Especial 5 meses de namoro, parabens para nozes!</p>
+                <button onclick="reiniciarJogo()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] sm:text-xs py-3 px-6 rounded-lg border-2 border-black pixel-border btn-active transition font-bold shadow-md">
+                    JOGAR NOVAMENTE <i class="fa-solid fa-rotate-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tela Inicial de Instruções -->
+        <div id="start-overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20 p-6 text-center">
+            <div class="bg-slate-900 p-6 sm:p-8 rounded-2xl border-4 border-black pixel-border max-w-md w-full shadow-2xl">
+                <h1 class="text-xs sm:text-base text-yellow-400 mb-3 font-bold">SUPER ANA QUEST</h1>
+                <p class="text-[9px] sm:text-[11px] text-sky-200 mb-5 leading-relaxed">
+                    Pule por debaixo das caixas misteriosas (<span class="text-yellow-400 font-bold">?</span>) para revelar as letras e montar a frase secreta!
+                </p>
+                <div class="text-[8px] sm:text-[10px] text-pink-300 mb-6 bg-slate-800 p-3 rounded-lg border border-slate-700 text-left leading-relaxed">
+                    📱 <span class="font-bold">Celular:</span> Use os botões direcionais e o botão de pulo (seta para cima).<br>
+                    💻 <span class="font-bold">PC:</span> Use as setas do teclado / W, A, D e Espaço.
+                </div>
+                <button onclick="iniciarJogo()" class="bg-yellow-400 hover:bg-yellow-500 text-black text-[9px] sm:text-xs py-3 px-6 rounded-lg border-2 border-black pixel-border btn-active font-bold transition shadow-lg">
+                    COMEÇAR JOGO <i class="fa-solid fa-play ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="w-full max-w-4xl p-3 sm:p-4 bg-sky-950 border-t-4 border-black flex justify-between items-center z-10 select-none">
+        <div class="flex space-x-3">
+            <button id="btn-left" class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white rounded-2xl border-2 border-black pixel-border flex items-center justify-center text-xl shadow-lg">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button id="btn-right" class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white rounded-2xl border-2 border-black pixel-border flex items-center justify-center text-xl shadow-lg">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+        <div>
+            <button id="btn-jump" class="w-20 h-20 sm:w-24 sm:h-24 bg-red-600 hover:bg-red-500 active:bg-red-400 text-white rounded-2xl border-2 border-black pixel-border flex items-center justify-center text-2xl shadow-lg">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Frase secreta exata com 12 letras: "I LOVE YOU ANA"
+        const letrasAlvo = ['I', 'L', 'O', 'V', 'E', 'Y', 'O', 'U', 'A', 'N', 'A'];
+        let letrasColetadas = [];
+        let jogoIniciado = false;
+        let jogoTerminado = false;
+
+        function redimensionarCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width || 800;
+            canvas.height = rect.height || 400;
+        }
+        window.addEventListener('resize', redimensionarCanvas);
+        redimensionarCanvas();
+
+        const mundo = {
+            largura: 2200,
+            altura: 400,
+            gravidade: 0.55
+        };
+
+        let camera = {
+            x: 0,
+            y: 0,
+            largura: canvas.width,
+            altura: canvas.height
+        };
+
+        let jogador = {
+            x: 50,
+            y: 280,
+            largura: 32,
+            height: 40,
+            vx: 0,
+            vy: 0,
+            velocidade: 4.5,
+            forcaPulo: -11.5,
+            noChao: false,
+            olhando: 'direita'
+        };
+
+        // Plataformas estendidas pelo mapa
+        let plataformas = [
+            { x: 0, y: 350, largura: 2200, height: 50, tipo: 'chao' },
+            { x: 250, y: 240, largura: 180, height: 24, tipo: 'plataforma' },
+            { x: 530, y: 190, largura: 200, height: 24, tipo: 'plataforma' },
+            { x: 830, y: 230, largura: 180, height: 24, tipo: 'plataforma' },
+            { x: 1110, y: 180, largura: 200, height: 24, tipo: 'plataforma' },
+            { x: 1410, y: 230, largura: 180, height: 24, tipo: 'plataforma' },
+            { x: 1710, y: 180, largura: 220, height: 24, tipo: 'plataforma' }
+        ];
+
+        // 12 caixas misteriosas correspondentes exatamente a "I LOVE YOU ANA"
+        let caixas = [
+            { x: 280, y: 130, largura: 32, height: 32, batida: false, letra: 'I', puloCaixa: 0 },
+            { x: 560, y: 80, largura: 32, height: 32, batida: false, letra: 'L', puloCaixa: 0 },
+            { x: 604, y: 80, largura: 32, height: 32, batida: false, letra: 'O', puloCaixa: 0 },
+            { x: 860, y: 120, largura: 32, height: 32, batida: false, letra: 'V', puloCaixa: 0 },
+            { x: 904, y: 120, largura: 32, height: 32, batida: false, letra: 'E', puloCaixa: 0 },
+            { x: 1140, y: 70, largura: 32, height: 32, batida: false, letra: 'Y', puloCaixa: 0 },
+            { x: 1184, y: 70, largura: 32, height: 32, batida: false, letra: 'O', puloCaixa: 0 },
+            { x: 1228, y: 70, largura: 32, height: 32, batida: false, letra: 'U', puloCaixa: 0 },
+            { x: 1440, y: 120, largura: 32, height: 32, batida: false, letra: 'A', puloCaixa: 0 },
+            { x: 1740, y: 70, largura: 32, height: 32, batida: false, letra: 'N', puloCaixa: 0 },
+            { x: 1784, y: 70, largura: 32, height: 32, batida: false, letra: 'A', puloCaixa: 0 }
+        ];
+
+        let letrasFlutuantes = [];
+
+        let teclas = {
+            esquerda: false,
+            direita: false,
+            pulo: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') teclas.esquerda = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') teclas.direita = true;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+                if (!teclas.pulo) executarPulo();
+                teclas.pulo = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') teclas.esquerda = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') teclas.direita = false;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') teclas.pulo = false;
+        });
+
+        const configurarBotaoTouch = (id, nomeTecla) => {
+            const btn = document.getElementById(id);
+            const ativar = (e) => {
+                e.preventDefault();
+                if (nomeTecla === 'pulo') executarPulo();
+                teclas[nomeTecla] = true;
+            };
+            const desativar = (e) => {
+                e.preventDefault();
+                teclas[nomeTecla] = false;
+            };
+
+            btn.addEventListener('touchstart', ativar);
+            btn.addEventListener('touchend', desativar);
+            btn.addEventListener('mousedown', ativar);
+            btn.addEventListener('mouseup', desativar);
+            btn.addEventListener('mouseleave', desativar);
+        };
+
+        configurarBotaoTouch('btn-left', 'esquerda');
+        configurarBotaoTouch('btn-right', 'direita');
+        configurarBotaoTouch('btn-jump', 'pulo');
+
+        function executarPulo() {
+            if (jogador.noChao) {
+                jogador.vy = jogador.forcaPulo;
+                jogador.noChao = false;
+            }
+        }
+
+        function iniciarJogo() {
+            document.getElementById('start-overlay').classList.add('hidden');
+            jogoIniciado = true;
+        }
+
+        function reiniciarJogo() {
+            jogador.x = 50;
+            jogador.y = 280;
+            jogador.vx = 0;
+            jogador.vy = 0;
+            letrasColetadas = [];
+            letrasFlutuantes = [];
+            caixas.forEach(c => {
+                c.batida = false;
+                c.puloCaixa = 0;
+            });
+            jogoTerminado = false;
+            document.getElementById('victory-modal').classList.add('hidden');
+            atualizarRastreador();
+        }
+
+        function atualizar() {
+            if (!jogoIniciado || jogoTerminado) return;
+
+            jogador.vx = 0;
+            if (teclas.esquerda) {
+                jogador.vx = -jogador.velocidade;
+                jogador.olhando = 'esquerda';
+            }
+            if (teclas.direita) {
+                jogador.vx = jogador.velocidade;
+                jogador.olhando = 'direita';
+            }
+
+            jogador.x += jogador.vx;
+            if (jogador.x < 0) jogador.x = 0;
+            if (jogador.x + jogador.largura > mundo.largura) jogador.x = mundo.largura - jogador.largura;
+
+            jogador.vy += mundo.gravidade;
+            jogador.y += jogador.vy;
+            jogador.noChao = false;
+
+            plataformas.forEach(p => {
+                if (
+                    jogador.x + jogador.largura > p.x &&
+                    jogador.x < p.x + p.largura &&
+                    jogador.y + jogador.height >= p.y &&
+                    jogador.y + jogador.height - jogador.vy <= p.y + 12 &&
+                    jogador.vy >= 0
+                ) {
+                    jogador.y = p.y - jogador.height;
+                    jogador.vy = 0;
+                    jogador.noChao = true;
+                }
+            });
+
+            caixas.forEach(caixa => {
+                if (caixa.puloCaixa > 0) caixa.puloCaixa -= 0.6;
+
+                if (
+                    !caixa.batida &&
+                    jogador.x + jogador.largura > caixa.x + 4 &&
+                    jogador.x < caixa.x + caixa.largura - 4 &&
+                    jogador.y <= caixa.y + caixa.height &&
+                    jogador.y - jogador.vy >= caixa.y + caixa.height - 10 &&
+                    jogador.vy < 0
+                ) {
+                    jogador.vy = 2;
+                    caixa.batida = true;
+                    caixa.puloCaixa = 8;
+
+                    letrasFlutuantes.push({
+                        x: caixa.x + caixa.largura / 2 - 8,
+                        y: caixa.y - 10,
+                        letra: caixa.letra,
+                        alpha: 1.0,
+                        vy: -1.8
+                    });
+
+                    letrasColetadas.push(caixa.letra);
+                    atualizarRastreador();
+
+                    if (letrasColetadas.length === letrasAlvo.length) {
+                        setTimeout(() => {
+                            jogoTerminado = true;
+                            document.getElementById('victory-modal').classList.remove('hidden');
+                        }, 500);
+                    }
+                }
+            });
+
+            letrasFlutuantes.forEach(lf => {
+                lf.y += lf.vy;
+                lf.alpha -= 0.012;
+            });
+            letrasFlutuantes = letrasFlutuantes.filter(lf => lf.alpha > 0);
+
+            camera.largura = canvas.width;
+            camera.altura = canvas.height;
+            camera.x = jogador.x - camera.largura / 2 + jogador.largura / 2;
+            if (camera.x < 0) camera.x = 0;
+            if (camera.x > mundo.largura - camera.largura) camera.x = mundo.largura - camera.largura;
+        }
+
+        function atualizarRastreador() {
+            document.getElementById('letters-count').innerText = letrasColetadas.length;
+            
+            // Exibição da frase exata: I LOVE YOU ANA
+            const estruturaFrase = ['I', ' ', 'L', 'O', 'V', 'E', ' ', 'Y', 'O', 'U', ' ', 'A', 'N', 'A'];
+            let htmlStr = '';
+            let contadorMatch = 0;
+
+            for (let i = 0; i < estruturaFrase.length; i++) {
+                if (estruturaFrase[i] === ' ') {
+                    htmlStr += '&nbsp;&nbsp;';
+                } else {
+                    if (contadorMatch < letrasColetadas.length) {
+                        htmlStr += `<span class="text-yellow-300 font-bold">${estruturaFrase[i]}</span>`;
+                        contadorMatch++;
+                    } else {
+                        htmlStr += `<span class="text-gray-500">_</span>`;
+                    }
+                }
+            }
+            document.getElementById('phrase-tracker').innerHTML = htmlStr;
+        }
+
+        function desenhar() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(0, 0, mundo.largura, mundo.altura);
+
+            // Colinas de fundo
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath();
+            ctx.moveTo(0, 350);
+            ctx.lineTo(300, 220);
+            ctx.lineTo(600, 350);
+            ctx.lineTo(950, 200);
+            ctx.lineTo(1350, 350);
+            ctx.lineTo(1750, 220);
+            ctx.lineTo(2200, 350);
+            ctx.lineTo(2200, 400);
+            ctx.closePath();
+            ctx.fill();
+
+            plataformas.forEach(p => {
+                if (p.tipo === 'chao') {
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillRect(p.x, p.y, p.largura, 16);
+                    ctx.fillStyle = '#a16207';
+                    ctx.fillRect(p.x, p.y + 16, p.largura, p.height - 16);
+                } else {
+                    ctx.fillStyle = '#b45309';
+                    ctx.fillRect(p.x, p.y, p.largura, p.height);
+                    ctx.strokeStyle = '#78350f';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(p.x, p.y, p.largura, p.height);
+                }
+            });
+
+            caixas.forEach(caixa => {
+                let yDesenho = caixa.y - caixa.puloCaixa;
+                if (!caixa.batida) {
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(caixa.x, yDesenho, caixa.largura, caixa.height);
+                    ctx.strokeStyle = '#a16207';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(caixa.x, yDesenho, caixa.largura, caixa.height);
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px "Press Start 2P"';
+                    ctx.fillText('?', caixa.x + 8, yDesenho + 24);
+                } else {
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(caixa.x, yDesenho, caixa.largura, caixa.height);
+                    ctx.strokeStyle = '#451a03';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(caixa.x, yDesenho, caixa.largura, caixa.height);
+                }
+            });
+
+            letrasFlutuantes.forEach(lf => {
+                ctx.save();
+                ctx.globalAlpha = lf.alpha;
+                ctx.fillStyle = '#f43f5e';
+                ctx.font = 'bold 20px "Press Start 2P"';
+                ctx.fillText(lf.letra, lf.x, lf.y);
+                ctx.restore();
+            });
+
+            // Personagem estilo Mario
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(jogador.x, jogador.y + 12, jogador.largura, jogador.height - 12);
+            ctx.fillStyle = '#2563eb';
+            ctx.fillRect(jogador.x + 4, jogador.y + 24, jogador.largura - 8, jogador.height - 24);
+            
+            ctx.fillStyle = '#fed7aa';
+            if (jogador.olhando === 'direita') {
+                ctx.fillRect(jogador.x + 16, jogador.y + 8, 14, 14);
+            } else {
+                ctx.fillRect(jogador.x + 2, jogador.y + 8, 14, 14);
+            }
+
+            ctx.fillStyle = '#dc2626';
+            if (jogador.olhando === 'direita') {
+                ctx.fillRect(jogador.x + 10, jogador.y + 4, 20, 8);
+            } else {
+                ctx.fillRect(jogador.x + 2, jogador.y + 4, 20, 8);
+            }
+
+            ctx.restore();
+        }
+
+        function loopPrincipal() {
+            atualizar();
+            desenhar();
+            requestAnimationFrame(loopPrincipal);
+        }
+
+        atualizarRastreador();
+        requestAnimationFrame(loopPrincipal);
+    </script>
+</body>
+</html>
